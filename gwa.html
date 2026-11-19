@@ -1,0 +1,1427 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="dark" />
+    <link rel="icon" href="data:," />
+    <title>GWA — Built with the Ammora SDK</title>
+    <meta name="description" content="GWA: a working ETH ⇄ tAMM exchange on GIWA Sepolia testnet, built with the Ammora SDK." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preconnect" href="https://esm.sh" />
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+    <link rel="modulepreload" href="https://esm.sh/@ammora-protocol/sdk@0.3.9/es2022/sdk.bundle.mjs" />
+    <style>
+      :root {
+        --bg: #06090d;
+        --bg-2: #0a0f16;
+        --panel: #0e141d;
+        --panel-2: #0a0f16;
+        --inset: #080d13;
+        --line: #1c2735;
+        --line-soft: #141d29;
+        --text: #e9f0f6;
+        --muted: #8d9cae;
+        --faint: #5d6d80;
+        --accent: #2fe6a7;
+        --accent-dim: #123528;
+        --accent-text: #052e21;
+        --warn: #ffb454;
+        --danger: #ff6b6b;
+        --danger-dim: #3a1d1d;
+        --ok-dim: #10382a;
+        --radius: 18px;
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; padding: 0; }
+      body {
+        background:
+          radial-gradient(900px 480px at 85% -10%, rgba(47, 230, 167, 0.07), transparent 60%),
+          radial-gradient(700px 500px at -10% 110%, rgba(47, 230, 167, 0.045), transparent 60%),
+          var(--bg);
+        color: var(--text);
+        font-family: "Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;
+        min-height: 100vh;
+        -webkit-font-smoothing: antialiased;
+      }
+      button, [role="button"], select, summary, input:not([type="checkbox"], [type="radio"]) { min-height: 2.25rem; }
+      button { font-family: inherit; cursor: pointer; }
+      a { color: var(--accent); }
+      .mono { font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+      .wrap { max-width: 1060px; margin: 0 auto; padding: 20px 16px 56px; }
+
+      /* ---------- header ---------- */
+      header.top {
+        display: flex; align-items: flex-start; justify-content: space-between;
+        gap: 16px; flex-wrap: wrap; margin-bottom: 22px;
+      }
+      .brand h1 {
+        margin: 0; font-size: clamp(30px, 5vw, 42px); font-weight: 800; letter-spacing: -0.02em; line-height: 1.05;
+      }
+      .brand h1 .swap-word { color: var(--accent); }
+      .brand p { margin: 8px 0 0; color: var(--muted); font-size: 15px; max-width: 46ch; }
+      .badges { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+      .badge {
+        display: inline-flex; align-items: center; gap: 7px;
+        font-size: 12.5px; font-weight: 700; letter-spacing: 0.01em;
+        padding: 7px 12px; border-radius: 999px; border: 1px solid var(--line);
+        background: var(--panel); color: var(--text); min-height: 32px;
+      }
+      .badge .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); flex: none; }
+      .badge.sdk { border-color: rgba(47, 230, 167, 0.45); background: var(--accent-dim); color: #b9f7e2; }
+      .badge.net { color: var(--muted); }
+
+      .wallet-box { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+      .connect-btn {
+        background: var(--accent); color: var(--accent-text); border: 0; border-radius: 12px;
+        font-weight: 800; font-size: 15px; padding: 10px 20px; min-height: 44px;
+        display: inline-flex; align-items: center; gap: 9px;
+      }
+      .connect-btn:hover { filter: brightness(1.07); }
+      .connect-btn:disabled { opacity: 0.55; cursor: default; }
+      .wallet-meta { font-size: 12.5px; color: var(--muted); text-align: right; }
+      .wallet-meta .addr { color: var(--text); font-weight: 600; }
+      .detect-note { font-size: 12px; color: var(--faint); text-align: right; min-height: 15px; }
+      .wallet-picker { display: none; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+      .wallet-picker.show { display: flex; }
+      .wallet-opt {
+        background: var(--panel); border: 1px solid var(--line); color: var(--muted);
+        font-size: 12.5px; font-weight: 700; border-radius: 999px; padding: 6px 13px; min-height: 34px;
+      }
+      .wallet-opt:hover { color: var(--text); border-color: var(--accent); }
+      .wallet-opt.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+
+      /* ---------- layout ---------- */
+      .layout { display: grid; grid-template-columns: minmax(0, 470px) minmax(0, 1fr); gap: 20px; align-items: start; }
+      @media (max-width: 860px) { .layout { grid-template-columns: minmax(0, 1fr); } .wallet-box { align-items: flex-start; } .wallet-meta { text-align: left; } }
+
+      .card {
+        background: linear-gradient(180deg, #101824, var(--panel));
+        border: 1px solid var(--line); border-radius: var(--radius);
+        padding: 20px;
+      }
+      .card h2 { margin: 0 0 4px; font-size: 17px; font-weight: 800; letter-spacing: -0.01em; }
+      .card .sub { color: var(--muted); font-size: 13.5px; margin: 0 0 14px; }
+
+      /* ---------- market strip ---------- */
+      .market { display: none; margin-bottom: 20px; }
+      .market.show { display: block; }
+      .market-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+      @media (max-width: 560px) { .market-grid { grid-template-columns: 1fr; } }
+      .stat { background: var(--panel); border: 1px solid var(--line-soft); border-radius: 14px; padding: 14px 16px; }
+      .stat .k { font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--faint); margin-bottom: 6px; }
+      .stat .v { font-size: 19px; font-weight: 800; font-family: "JetBrains Mono", monospace; letter-spacing: -0.01em; }
+      .stat .v small { font-size: 12.5px; color: var(--muted); font-weight: 500; }
+
+      /* ---------- swap card ---------- */
+      .swap-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+      .swap-head h2 { margin: 0; }
+      .refresh-note { font-size: 12px; color: var(--faint); }
+      .token-panel {
+        background: var(--inset); border: 1px solid var(--line-soft); border-radius: 14px;
+        padding: 14px 14px 12px;
+      }
+      .token-panel:focus-within { border-color: rgba(47, 230, 167, 0.5); }
+      .panel-label { font-size: 12.5px; font-weight: 700; color: var(--faint); letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 8px; }
+      .panel-row { display: flex; align-items: center; gap: 10px; }
+      .amount-input {
+        flex: 1; min-width: 0; background: transparent; border: 0; outline: 0;
+        color: var(--text); font-family: "JetBrains Mono", monospace;
+        font-size: clamp(24px, 6vw, 30px); font-weight: 500; text-align: right; padding: 2px 0;
+      }
+      .amount-input::placeholder { color: #33415480; color: #334154; }
+      .amount-input[readonly] { color: var(--text); }
+      .usd-line { text-align: right; font-size: 12.5px; color: var(--faint); min-height: 17px; margin-top: 2px; }
+      .balance-line { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; font-size: 12.5px; color: var(--muted); }
+      .pct-row { display: flex; gap: 6px; }
+      .pct-btn {
+        background: var(--panel); border: 1px solid var(--line); color: var(--muted);
+        font-size: 12px; font-weight: 700; border-radius: 8px; padding: 4px 10px; min-height: 32px;
+      }
+      .pct-btn:hover { color: var(--text); border-color: var(--accent); }
+
+      .token-btn {
+        display: inline-flex; align-items: center; gap: 8px; flex: none;
+        background: var(--panel); border: 1px solid var(--line); color: var(--text);
+        border-radius: 999px; padding: 8px 14px 8px 10px; font-weight: 800; font-size: 16px; min-height: 44px;
+      }
+      .token-btn:hover { border-color: var(--accent); }
+      .token-coin {
+        width: 26px; height: 26px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
+        font-size: 13px; font-weight: 800; flex: none;
+      }
+      .coin-eth { background: #2b3a4d; color: #cfe3ff; }
+      .coin-tamm { background: var(--accent); color: var(--accent-text); }
+      .token-btn .caret { color: var(--faint); font-size: 11px; }
+      .token-menu-wrap { position: relative; flex: none; }
+      .token-menu {
+        position: absolute; top: calc(100% + 6px); left: 0; z-index: 30; min-width: 210px;
+        background: #131c29; border: 1px solid var(--line); border-radius: 12px; padding: 6px;
+        box-shadow: 0 18px 40px rgba(0,0,0,0.5); display: none;
+      }
+      .token-menu.open { display: block; }
+      .token-menu button {
+        display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+        background: transparent; border: 0; color: var(--text); border-radius: 8px; padding: 9px 10px; min-height: 44px;
+      }
+      .token-menu button:hover { background: #1a2635; }
+      .token-menu .tm-name { font-weight: 800; font-size: 14.5px; }
+      .token-menu .tm-sub { font-size: 12px; color: var(--muted); }
+
+      .flip-row { display: flex; justify-content: center; margin: -9px 0; position: relative; z-index: 5; }
+      .flip-btn {
+        width: 40px; height: 40px; border-radius: 12px; border: 1px solid var(--line);
+        background: #16202e; color: var(--accent); display: inline-flex; align-items: center; justify-content: center;
+      }
+      .flip-btn:hover { border-color: var(--accent); }
+      .flip-btn svg { transition: transform 0.25s ease; }
+      .flip-btn.flipped svg { transform: rotate(180deg); }
+
+      .slippage-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 16px 0 4px; flex-wrap: wrap; }
+      .slippage-row .lbl { font-size: 13.5px; font-weight: 700; color: var(--muted); }
+      .slip-group { display: flex; gap: 6px; }
+      .slip-btn {
+        background: var(--inset); border: 1px solid var(--line); color: var(--muted);
+        border-radius: 9px; padding: 6px 13px; font-weight: 700; font-size: 13.5px; min-height: 38px;
+        font-family: "JetBrains Mono", monospace;
+      }
+      .slip-btn.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+
+      .details { margin: 14px 0 4px; border-top: 1px dashed var(--line); padding-top: 12px; display: none; }
+      .details.show { display: block; }
+      .d-row { display: flex; justify-content: space-between; gap: 14px; font-size: 13.5px; padding: 4px 0; }
+      .d-row .dk { color: var(--muted); }
+      .d-row .dv { font-family: "JetBrains Mono", monospace; font-weight: 500; text-align: right; }
+      .d-row .dv.warn { color: var(--warn); }
+
+      .swap-btn {
+        width: 100%; margin-top: 14px; border: 0; border-radius: 14px; min-height: 54px;
+        background: var(--accent); color: var(--accent-text); font-size: 16.5px; font-weight: 800;
+      }
+      .swap-btn:hover:not(:disabled) { filter: brightness(1.07); }
+      .swap-btn:disabled { background: #1b2836; color: var(--faint); cursor: not-allowed; }
+
+      .msg { display: none; margin-top: 14px; border-radius: 12px; padding: 12px 14px; font-size: 13.5px; line-height: 1.5; }
+      .msg.show { display: block; }
+      .msg.err { background: var(--danger-dim); border: 1px solid rgba(255,107,107,0.4); color: #ffc9c9; }
+      .msg.ok { background: var(--ok-dim); border: 1px solid rgba(47,230,167,0.4); color: #c8f7e6; }
+      .msg.info { background: #12202f; border: 1px solid var(--line); color: var(--muted); }
+      .msg a { word-break: break-all; }
+      .msg .txhash { font-family: "JetBrains Mono", monospace; font-size: 12.5px; }
+
+      .no-wallet { display: none; margin-top: 14px; font-size: 13.5px; color: var(--muted); line-height: 1.55; }
+      .no-wallet.show { display: block; }
+      .recheck-btn {
+        display: inline-block; margin-top: 12px; background: var(--panel); border: 1px solid var(--line);
+        color: var(--text); border-radius: 10px; padding: 8px 16px; font-weight: 700; font-size: 13.5px; min-height: 40px;
+      }
+      .recheck-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+      /* ---------- side column ---------- */
+      .side { display: flex; flex-direction: column; gap: 20px; }
+      .verify-line { display: flex; gap: 9px; align-items: flex-start; font-size: 13.5px; line-height: 1.5; color: var(--muted); }
+      .verify-line .tick {
+        flex: none; width: 20px; height: 20px; border-radius: 50%; margin-top: 1px;
+        background: #1a2635; color: var(--muted); display: inline-flex; align-items: center; justify-content: center;
+        font-size: 12px; font-weight: 800;
+      }
+      .verify-line .tick.ok { background: var(--accent-dim); color: var(--accent); }
+      .verify-line .tick.warn { background: #3a2c14; color: var(--warn); }
+      .addr-list { display: flex; flex-direction: column; }
+      .addr-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid var(--line-soft); }
+      .addr-row:first-child { border-top: 0; padding-top: 2px; }
+      .addr-row .who { flex: none; width: 118px; }
+      .addr-row .who .n { font-weight: 800; font-size: 13.5px; }
+      .addr-row .who .d { font-size: 11.5px; color: var(--faint); }
+      .addr-row .val { flex: 1; min-width: 0; font-family: "JetBrains Mono", monospace; font-size: 12.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      @media (max-width: 560px) {
+        .addr-row { flex-wrap: wrap; }
+        .addr-row .who { width: auto; flex: 1; }
+        .addr-row .val { flex-basis: 100%; order: 3; white-space: normal; word-break: break-all; margin-top: 5px; }
+      }
+      .icon-btn {
+        flex: none; width: 36px; height: 36px; border-radius: 9px; border: 1px solid var(--line);
+        background: var(--inset); color: var(--muted); display: inline-flex; align-items: center; justify-content: center;
+        text-decoration: none;
+      }
+      .icon-btn:hover { color: var(--accent); border-color: var(--accent); }
+      .how-list { margin: 0; padding-left: 18px; color: var(--muted); font-size: 13.5px; line-height: 1.65; }
+      .how-list li::marker { color: var(--accent); }
+      .how-list b { color: var(--text); }
+
+      footer { margin-top: 26px; color: var(--faint); font-size: 12.5px; line-height: 1.6; text-align: center; }
+      footer .f-title { color: var(--muted); font-weight: 700; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header class="top">
+        <div class="brand">
+          <h1>GWA</h1>
+          <p>A working ETH ⇄ $tAMM exchange on the Ammora Protocol — live quotes from the on-chain pool, swaps signed in your own wallet.</p>
+          <div class="badges">
+            <span class="badge sdk"><span class="dot"></span>Built with the Ammora SDK</span>
+            <span class="badge net">GIWA Sepolia · Testnet · Chain 91342</span>
+          </div>
+        </div>
+        <div class="wallet-box">
+          <button class="connect-btn" id="connectBtn" type="button">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>
+            <span id="connectBtnLabel">Connect wallet</span>
+          </button>
+          <div class="wallet-meta" id="walletMeta">No wallet connected</div>
+          <div class="wallet-picker" id="walletPicker" aria-label="Choose which wallet to connect"></div>
+          <div class="detect-note" id="detectNote">Detecting wallet…</div>
+        </div>
+      </header>
+
+      <section class="card market" id="marketPanel" aria-label="tAMM market reference">
+        <div class="market-grid">
+          <div class="stat"><div class="k">$tAMM price</div><div class="v" id="mPriceEth">—</div></div>
+          <div class="stat"><div class="k">Price in USD</div><div class="v" id="mPriceUsd">—</div></div>
+          <div class="stat"><div class="k">24h volume</div><div class="v" id="mVol">—</div></div>
+        </div>
+        <p class="sub" style="margin:10px 0 0;">Live market reference from ammora.org · <span id="mUpdated">fetching…</span></p>
+      </section>
+
+      <div class="layout">
+        <!-- ============ SWAP CARD ============ -->
+        <section class="card" aria-label="Swap">
+          <div class="swap-head">
+            <h2>Swap</h2>
+            <span class="refresh-note" id="quoteNote">Quotes refresh automatically</span>
+          </div>
+
+          <div class="token-panel">
+            <div class="panel-label">You pay</div>
+            <div class="panel-row">
+              <div class="token-menu-wrap">
+                <button class="token-btn" id="payTokenBtn" type="button" aria-haspopup="true" aria-expanded="false">
+                  <span class="token-coin coin-eth" id="payCoin">Ξ</span>
+                  <span id="paySymbol">ETH</span>
+                  <span class="caret">▼</span>
+                </button>
+                <div class="token-menu" id="payMenu" role="menu"></div>
+              </div>
+              <input class="amount-input" id="payInput" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" placeholder="0.0" aria-label="Amount to pay" />
+            </div>
+            <div class="balance-line">
+              <span>Balance: <span class="mono" id="payBalance">—</span></span>
+              <span class="pct-row">
+                <button class="pct-btn" type="button" data-pct="25">25%</button>
+                <button class="pct-btn" type="button" data-pct="50">50%</button>
+                <button class="pct-btn" type="button" data-pct="75">75%</button>
+                <button class="pct-btn" type="button" data-pct="100">MAX</button>
+              </span>
+            </div>
+          </div>
+
+          <div class="flip-row">
+            <button class="flip-btn" id="flipBtn" type="button" aria-label="Flip swap direction" title="Flip direction">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4v13"/><path d="m3 13 4 4 4-4"/><path d="M17 20V7"/><path d="m21 11-4-4-4 4"/></svg>
+            </button>
+          </div>
+
+          <div class="token-panel">
+            <div class="panel-label">You receive</div>
+            <div class="panel-row">
+              <div class="token-menu-wrap">
+                <button class="token-btn" id="receiveTokenBtn" type="button" aria-haspopup="true" aria-expanded="false">
+                  <span class="token-coin coin-tamm" id="receiveCoin">A</span>
+                  <span id="receiveSymbol">tAMM</span>
+                  <span class="caret">▼</span>
+                </button>
+                <div class="token-menu" id="receiveMenu" role="menu"></div>
+              </div>
+              <input class="amount-input" id="receiveInput" type="text" placeholder="0.0" readonly aria-label="Amount you receive" />
+            </div>
+            <div class="usd-line" id="receiveUsd"></div>
+            <div class="balance-line">
+              <span>Balance: <span class="mono" id="receiveBalance">—</span></span>
+              <span id="quoteState" style="color:var(--faint);"></span>
+            </div>
+          </div>
+
+          <div class="slippage-row">
+            <span class="lbl">Slippage tolerance</span>
+            <div class="slip-group" id="slipGroup" role="group" aria-label="Slippage tolerance">
+              <button class="slip-btn" type="button" data-slip="10">0.1%</button>
+              <button class="slip-btn" type="button" data-slip="50">0.5%</button>
+              <button class="slip-btn active" type="button" data-slip="100">1%</button>
+              <button class="slip-btn" type="button" data-slip="200">2%</button>
+            </div>
+          </div>
+
+          <div class="details" id="detailsBox">
+            <div class="d-row"><span class="dk">Rate</span><span class="dv" id="dRate">—</span></div>
+            <div class="d-row"><span class="dk">Price impact</span><span class="dv" id="dImpact">—</span></div>
+            <div class="d-row"><span class="dk">Minimum received</span><span class="dv" id="dMin">—</span></div>
+            <div class="d-row"><span class="dk">Route</span><span class="dv">ETH ⇄ tAMM · ARL V5 pool</span></div>
+            <div class="d-row"><span class="dk">Deadline</span><span class="dv">20 minutes</span></div>
+          </div>
+
+          <button class="swap-btn" id="swapBtn" type="button" disabled>Connect wallet to swap</button>
+
+          <div class="msg" id="msgBox" role="status"></div>
+
+          <p class="no-wallet" id="noWalletBox">
+            No browser wallet detected yet. GWA works with any EVM wallet — Brave Wallet, MetaMask, Trust Wallet, OKX Wallet, Coinbase Wallet, Rabby, Phantom and others — and signs swaps with your own wallet; nothing is ever signed for you.<br /><br />
+            <b style="color:var(--text)">On mobile:</b> open this page inside your wallet app's built-in browser (in MetaMask, Trust Wallet, OKX or Coinbase Wallet, use the app's browser / DApps tab and paste this page's link there), unlock the wallet, then tap Re-check below.<br /><br />
+            <b style="color:var(--text)">On desktop:</b> install a wallet extension — <a href="https://metamask.io/download/" target="_blank" rel="noopener">MetaMask</a>, <a href="https://rabby.io/" target="_blank" rel="noopener">Rabby</a>, <a href="https://www.coinbase.com/wallet" target="_blank" rel="noopener">Coinbase Wallet</a> or <a href="https://www.okx.com/web3" target="_blank" rel="noopener">OKX Wallet</a> — unlock it, then reload this page.<br /><br />
+            <b style="color:var(--text)">Using Brave:</b> open this page in the Brave browser, unlock Brave Wallet from the toolbar, and if Brave offers another wallet instead, set Brave Settings → Web3 → default Ethereum wallet to <b style="color:var(--text)">Brave Wallet</b>, then reload.
+            Quotes, balances and the pool check are all read through your wallet once it is connected — this page never talks to a public RPC directly.
+            <span id="embedNote"></span>
+            <br />
+            <button class="recheck-btn" id="recheckBtn" type="button">Re-check for wallet</button>
+          </p>
+        </section>
+
+        <!-- ============ SIDE COLUMN ============ -->
+        <div class="side">
+          <section class="card" aria-label="On-chain verification">
+            <h2>Verified on-chain</h2>
+            <p class="sub">Read live from GIWA Sepolia through your connected wallet — no hard-coded prices anywhere, and no public RPC in between. If a read fails, the check retries by itself.</p>
+            <div class="verify-line" id="verifyLine">
+              <span class="tick" id="verifyTick">…</span>
+              <span id="verifyText">Checking the tAMM curve and pool…</span>
+            </div>
+          </section>
+
+          <section class="card" aria-label="Contracts">
+            <h2>Contracts</h2>
+            <p class="sub">GIWA Sepolia testnet addresses used by this exchange.</p>
+            <div class="addr-list" id="addrList"></div>
+          </section>
+
+          <section class="card" aria-label="How it works">
+            <h2>How a swap works here</h2>
+            <p class="sub">Same quote path and calldata builders as the official Ammora swap.</p>
+            <ol class="how-list">
+              <li><b>Quote</b> — the pool's <span class="mono">quoteExactIn</span> is read on-chain through your connected wallet's own provider for every amount you type — never a public RPC.</li>
+              <li><b>Build</b> — the SDK builders <span class="mono">buildV3NativePoolExactInput</span> / <span class="mono">buildV3PoolExactInputForNative</span> produce the router calldata with your slippage and a 20-minute deadline.</li>
+              <li><b>Sign</b> — your wallet sends the transaction to the Ammora native router. Selling tAMM first asks for an exact-amount approval, never unlimited.</li>
+            </ol>
+          </section>
+        </div>
+      </div>
+
+      <footer>
+        <span class="f-title">GWA</span> · Built with the Ammora SDK for the Ammora Season 2 Builder mission.<br />
+        Testnet only — GIWA Sepolia ETH and $tAMM have no real-world value. Never share a private key or seed phrase with any website, including this one.
+      </footer>
+    </div>
+
+    <script>
+    (function () {
+      'use strict';
+
+      /* ================= constants (verified on-chain) ================= */
+      var CHAIN_ID = 91342;
+      var RPC_URL = 'https://sepolia-rpc.giwa.io'; // only used as the wallet's own chain config when adding GIWA Sepolia — page reads never call it directly
+      var EXPLORER = 'https://sepolia-explorer.giwa.io';
+      var TOKEN = '0x10b3cc2fc981277ada576891cf649d0aba768b06';   // tAMM, 6 decimals
+      var CURVE = '0x1fd82a1beaff168bdefc790eb0f1a50f7c53b978';
+      var POOL = '0x1ef92a6a9bb4bbed2b385dd5e688f88e7965bcf8';
+      var WETH = '0x4200000000000000000000000000000000000006';
+      var ROUTER = '0xB1914b8ac353D8e4702eec1Dc07995c7C2c5ac15';
+      var FACTORY = '0xC0Fc168DeD39DA53C11D5082D9303216C3c37375';
+      var ZERO = '0x0000000000000000000000000000000000000000';
+      // The Ammora SDK is only needed to BUILD swap calldata. Everything
+      // else on this page — balances, quotes, pool verification, allowance,
+      // approvals, transaction sending and receipt polling — runs on raw
+      // JSON-RPC calls through the wallet, so the page is fully usable the
+      // moment the wallet connects and never sits on "Loading Ammora SDK…"
+      // while the (large) SDK bundle downloads in the background.
+      var SDK_FILE = 'https://esm.sh/@ammora-protocol/sdk@0.3.9/es2022/sdk.bundle.mjs';
+      var SDK_FILE_FALLBACK = 'https://cdn.jsdelivr.net/npm/@ammora-protocol/sdk@0.3.9/+esm';
+      // Function selectors (keccak256 of the signature, first 4 bytes) for
+      // the raw eth_call / eth_sendTransaction paths.
+      var SEL = {
+        quoteExactIn: '0xfc521e91',   // pool.quoteExactIn(address,uint256)
+        curveStatus: '0x200d2ed2',    // curve.status()
+        canonicalPool: '0x3cee0be3',  // curve.canonicalPool()
+        isPool: '0x5b16ebb7',         // factory.isPool(address)
+        balanceOf: '0x70a08231',      // erc20.balanceOf(address)
+        allowance: '0xdd62ed3e',      // erc20.allowance(address,address)
+        approve: '0x095ea7b3'         // erc20.approve(address,uint256)
+      };
+      var MARKET_URL = 'https://ammora.org/api/waitlist/season2/market?interval=900';
+
+      var TOKENS = {
+        ETH: { symbol: 'ETH', name: 'Ether (native)', decimals: 18, coin: 'Ξ', coinClass: 'coin-eth' },
+        TAMM: { symbol: 'tAMM', name: 'tAmm Coin', decimals: 6, coin: 'A', coinClass: 'coin-tamm' }
+      };
+
+      /* ================= dom ================= */
+      function $(id) { return document.getElementById(id); }
+      var els = {
+        connectBtn: $('connectBtn'), connectBtnLabel: $('connectBtnLabel'), walletMeta: $('walletMeta'),
+        walletPicker: $('walletPicker'), detectNote: $('detectNote'),
+        payInput: $('payInput'), receiveInput: $('receiveInput'), receiveUsd: $('receiveUsd'),
+        payBalance: $('payBalance'), receiveBalance: $('receiveBalance'), quoteState: $('quoteState'),
+        paySymbol: $('paySymbol'), receiveSymbol: $('receiveSymbol'), payCoin: $('payCoin'), receiveCoin: $('receiveCoin'),
+        payTokenBtn: $('payTokenBtn'), receiveTokenBtn: $('receiveTokenBtn'), payMenu: $('payMenu'), receiveMenu: $('receiveMenu'),
+        flipBtn: $('flipBtn'), swapBtn: $('swapBtn'), msgBox: $('msgBox'), noWalletBox: $('noWalletBox'),
+        embedNote: $('embedNote'), recheckBtn: $('recheckBtn'),
+        detailsBox: $('detailsBox'), dRate: $('dRate'), dImpact: $('dImpact'), dMin: $('dMin'),
+        verifyText: $('verifyText'), quoteNote: $('quoteNote'),
+        marketPanel: $('marketPanel'), mPriceEth: $('mPriceEth'), mPriceUsd: $('mPriceUsd'), mVol: $('mVol'), mUpdated: $('mUpdated')
+      };
+
+      /* ================= state ================= */
+      var sdk = null, sdkPromise = null;
+      var sdkFailed = false, sdkLoadSeq = 0;
+      var account = null, chainOk = false;
+      var payToken = 'ETH';                 // 'ETH' | 'TAMM'  (receive is always the other)
+      var slippageBps = 100;                // default 1%
+      var balances = { ETH: null, TAMM: null };
+      var lastQuote = null;                 // { amountIn, amountOut, rate, impact, minOut }
+      var quoteSeq = 0, quoting = false, swapping = false;
+      var activePool = POOL;
+      var marketUsdRate = null;             // ETH USD rate from market API (display only)
+      var debounceTimer = null, quoteTimer = null, balanceTimer = null;
+
+      function receiveToken() { return payToken === 'ETH' ? 'TAMM' : 'ETH'; }
+      function tokenInAddress() { return payToken === 'ETH' ? WETH : TOKEN; }
+
+      /* ================= formatting ================= */
+      function fmtUnits(raw, decimals, maxFrac) {
+        if (raw === null || raw === undefined) return '—';
+        var s = scaleUnits(raw, decimals);
+        return trimNum(s, maxFrac == null ? 6 : maxFrac);
+      }
+      // String-math unit scaling, so balances can be parsed and rendered
+      // before viem (and the whole SDK bundle) has finished downloading.
+      function scaleUnits(raw, decimals) {
+        var s = raw.toString();
+        var neg = s.charAt(0) === '-'; if (neg) s = s.slice(1);
+        while (s.length <= decimals) s = '0' + s;
+        var int = decimals ? s.slice(0, s.length - decimals) : s;
+        var frac = decimals ? s.slice(s.length - decimals) : '';
+        return (neg ? '-' : '') + int + (frac ? '.' + frac : '');
+      }
+      function parseUnitsFallback(v, decimals) {
+        var parts = String(v).split('.');
+        var int = parts[0] === '' ? '0' : parts[0];
+        var frac = parts[1] || '';
+        if (frac.length > decimals) frac = frac.slice(0, decimals);
+        while (frac.length < decimals) frac += '0';
+        return BigInt(int + frac);
+      }
+      function trimNum(s, maxFrac) {
+        var neg = s.charAt(0) === '-'; if (neg) s = s.slice(1);
+        var parts = s.split('.');
+        var int = parts[0], frac = parts[1] || '';
+        if (frac.length > maxFrac) frac = frac.slice(0, maxFrac);
+        frac = frac.replace(/0+$/, '');
+        int = int.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        return (neg ? '-' : '') + int + (frac ? '.' + frac : '');
+      }
+      function fmtFloat(n, maxFrac) {
+        if (n === null || n === undefined || !isFinite(n)) return '—';
+        return trimNum(n.toFixed(maxFrac == null ? 6 : maxFrac), maxFrac == null ? 6 : maxFrac);
+      }
+      function shortAddr(a) { return a ? a.slice(0, 6) + '…' + a.slice(-4) : ''; }
+      function errText(e) {
+        if (!e) return 'Unknown error';
+        if (e.code === 4001 || /rejected|denied/i.test(e.message || '')) return 'You rejected the request in your wallet.';
+        if (e.code === -32002) return 'A connection request is already open in your wallet — open the wallet app or extension and approve it there, then tap Connect again.';
+        var base = e.shortMessage || e.message || String(e);
+        var bits = [];
+        if (typeof e.status === 'number') bits.push('HTTP ' + e.status);
+        var det = e.details ? String(e.details).trim() : '';
+        if (det && det !== base && base.indexOf(det) === -1) bits.push(det.length > 140 ? det.slice(0, 140) + '…' : det);
+        return bits.length ? base + ' (' + bits.join(' · ') + ')' : base;
+      }
+
+      /* ================= messages ================= */
+      function showMsg(kind, html) {
+        els.msgBox.className = 'msg show ' + kind;
+        els.msgBox.innerHTML = html;
+      }
+      function hideMsg() { els.msgBox.className = 'msg'; els.msgBox.innerHTML = ''; }
+
+      /* ================= contracts list ================= */
+      var CONTRACTS = [
+        { n: '$tAMM token', d: 'tAmm Coin · 6 decimals', a: TOKEN },
+        { n: 'ARL V5 pool', d: 'ETH / tAMM concentrated pool', a: POOL },
+        { n: 'Bonding curve', d: 'Graduated · status 3', a: CURVE },
+        { n: 'Native router', d: 'Swaps are sent here', a: ROUTER },
+        { n: 'WETH', d: 'Wrapped native asset', a: WETH },
+        { n: 'V5 factory', d: 'Pool registry', a: FACTORY }
+      ];
+      function buildAddrList() {
+        var html = '';
+        CONTRACTS.forEach(function (c, i) {
+          html += '<div class="addr-row">' +
+            '<div class="who"><div class="n">' + c.n + '</div><div class="d">' + c.d + '</div></div>' +
+            '<div class="val" title="' + c.a + '">' + c.a + '</div>' +
+            '<button class="icon-btn" type="button" data-copy="' + i + '" title="Copy address" aria-label="Copy ' + c.n + ' address">' +
+              '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>' +
+            '</button>' +
+            '<a class="icon-btn" href="' + EXPLORER + '/address/' + c.a + '" target="_blank" rel="noopener" title="View on explorer" aria-label="View ' + c.n + ' on explorer">' +
+              '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5"/></svg>' +
+            '</a></div>';
+        });
+        $('addrList').innerHTML = html;
+        Array.prototype.forEach.call(document.querySelectorAll('[data-copy]'), function (btn) {
+          btn.addEventListener('click', function () {
+            var addr = CONTRACTS[Number(btn.getAttribute('data-copy'))].a;
+            copyText(addr, btn);
+          });
+        });
+      }
+      function copyText(text, btn) {
+        function done() {
+          if (!btn) return;
+          var old = btn.innerHTML;
+          btn.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2fe6a7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
+          setTimeout(function () { btn.innerHTML = old; }, 1400);
+        }
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(done, done);
+        } else {
+          var ta = document.createElement('textarea');
+          ta.value = text; document.body.appendChild(ta); ta.select();
+          try { document.execCommand('copy'); } catch (e) {}
+          document.body.removeChild(ta); done();
+        }
+      }
+
+      /* ================= token menus ================= */
+      function menuHtml() {
+        var html = '';
+        ['ETH', 'TAMM'].forEach(function (k) {
+          var t = TOKENS[k];
+          html += '<button type="button" role="menuitem" data-token="' + k + '">' +
+            '<span class="token-coin ' + t.coinClass + '">' + t.coin + '</span>' +
+            '<span><span class="tm-name">' + t.symbol + '</span><br /><span class="tm-sub">' + t.name + '</span></span></button>';
+        });
+        return html;
+      }
+      function closeMenus() {
+        els.payMenu.classList.remove('open'); els.receiveMenu.classList.remove('open');
+        els.payTokenBtn.setAttribute('aria-expanded', 'false'); els.receiveTokenBtn.setAttribute('aria-expanded', 'false');
+      }
+      function wireMenu(btn, menu, side) {
+        menu.innerHTML = menuHtml();
+        btn.addEventListener('click', function (e) {
+          e.stopPropagation();
+          var wasOpen = menu.classList.contains('open');
+          closeMenus();
+          if (!wasOpen) { menu.classList.add('open'); btn.setAttribute('aria-expanded', 'true'); }
+        });
+        menu.addEventListener('click', function (e) {
+          var b = e.target.closest('[data-token]');
+          if (!b) return;
+          var picked = b.getAttribute('data-token');
+          closeMenus();
+          if (side === 'pay') { if (picked !== payToken) setDirection(picked, true); }
+          else { if (picked !== receiveToken()) setDirection(picked === 'ETH' ? 'TAMM' : 'ETH', true); }
+        });
+      }
+      document.addEventListener('click', function (e) {
+        if (!e.target.closest('.token-menu-wrap')) closeMenus();
+      });
+
+      function renderDirection() {
+        var p = TOKENS[payToken], r = TOKENS[receiveToken()];
+        els.paySymbol.textContent = p.symbol;
+        els.payCoin.textContent = p.coin; els.payCoin.className = 'token-coin ' + p.coinClass;
+        els.receiveSymbol.textContent = r.symbol;
+        els.receiveCoin.textContent = r.coin; els.receiveCoin.className = 'token-coin ' + r.coinClass;
+        renderBalances();
+      }
+      function setDirection(newPay, keepAmount) {
+        var prevOut = els.receiveInput.value;
+        payToken = newPay;
+        els.flipBtn.classList.toggle('flipped', payToken === 'TAMM');
+        renderDirection();
+        if (keepAmount && prevOut && prevOut !== '0.0') {
+          els.payInput.value = prevOut.replace(/,/g, '');
+        }
+        lastQuote = null;
+        scheduleQuote(0);
+        updateSwapBtn();
+      }
+
+      /* ============ reads & writes: raw JSON-RPC through the wallet ============ */
+      // Every on-chain read and write goes through the wallet's own
+      // EIP-1193 provider with hand-encoded calldata — no viem, no SDK, no
+      // public RPC — so nothing on this page waits on a library download.
+      function ethCall(to, data) {
+        var p = getProvider();
+        if (!p) return Promise.reject(new Error('No wallet provider available.'));
+        return p.request({ method: 'eth_call', params: [{ to: to, data: data }, 'latest'] });
+      }
+      function encAddr(a) { return '000000000000000000000000' + String(a).slice(2).toLowerCase(); }
+      function encUint(v) { var h = v.toString(16); while (h.length < 64) h = '0' + h; return h; }
+      function decodeUint(hex) { return (!hex || hex === '0x') ? 0n : BigInt(hex); }
+      function decodeAddr(hex) { return (!hex || hex === '0x') ? ZERO : '0x' + hex.slice(-40); }
+      function sendTxRaw(tx) {
+        var p = getProvider();
+        if (!p) return Promise.reject(new Error('No wallet provider available.'));
+        var params = { from: account, to: tx.to, data: tx.data };
+        if (tx.value !== undefined && tx.value !== null) params.value = '0x' + tx.value.toString(16);
+        return p.request({ method: 'eth_sendTransaction', params: [params] });
+      }
+      function waitReceiptRaw(hash) {
+        var p = getProvider();
+        var tries = 0;
+        return new Promise(function (resolve, reject) {
+          (function poll() {
+            p.request({ method: 'eth_getTransactionReceipt', params: [hash] }).then(function (rcpt) {
+              if (rcpt) { resolve(rcpt); return; }
+              if (++tries > 90) { reject(new Error('Timed out waiting for the transaction receipt — check the explorer for the final status.')); return; }
+              setTimeout(poll, 2500);
+            }).catch(function () {
+              if (++tries > 90) { reject(new Error('Timed out waiting for the transaction receipt — check the explorer for the final status.')); return; }
+              setTimeout(poll, 2500);
+            });
+          })();
+        });
+      }
+
+      /* ================= balances ================= */
+      function renderBalances() {
+        els.payBalance.textContent = balances[payToken] === null ? '—' : fmtUnits(balances[payToken], TOKENS[payToken].decimals, 6) + ' ' + payToken.replace('TAMM', 'tAMM');
+        var rt = receiveToken();
+        els.receiveBalance.textContent = balances[rt] === null ? '—' : fmtUnits(balances[rt], TOKENS[rt].decimals, 6) + ' ' + rt.replace('TAMM', 'tAMM');
+      }
+      // Fast path: balances straight from the wallet provider with raw
+      // JSON-RPC calls — no viem, no SDK bundle — so they appear as soon as
+      // the wallet connects instead of only after the (large, slow on
+      // mobile) SDK download finishes.
+      function refreshBalancesRaw() {
+        var p = getProvider();
+        if (!p || !account) { renderBalances(); return Promise.resolve(); }
+        var data = SEL.balanceOf + '000000000000000000000000' + account.slice(2).toLowerCase(); // balanceOf(account)
+        return Promise.all([
+          p.request({ method: 'eth_getBalance', params: [account, 'latest'] }),
+          p.request({ method: 'eth_call', params: [{ to: TOKEN, data: data }, 'latest'] })
+        ]).then(function (res) {
+          balances.ETH = res[0] && res[0] !== '0x' ? BigInt(res[0]) : 0n;
+          balances.TAMM = res[1] && res[1] !== '0x' ? BigInt(res[1]) : 0n;
+          renderBalances(); updateSwapBtn();
+        }).catch(function () { /* keep last known balances */ });
+      }
+      function refreshBalances() { return refreshBalancesRaw(); }
+
+      /* ================= quoting ================= */
+      function parsePayAmount() {
+        var v = els.payInput.value.trim().replace(/,/g, '');
+        if (!v || v === '.') return null;
+        if (!/^\d*\.?\d*$/.test(v)) return null;
+        try {
+          var raw = parseUnitsFallback(v, TOKENS[payToken].decimals);
+          return raw > 0n ? raw : null;
+        } catch (e) { return null; }
+      }
+      function quoteOnce(tokenIn, amountIn) {
+        return ethCall(activePool, SEL.quoteExactIn + encAddr(tokenIn) + encUint(amountIn)).then(decodeUint);
+      }
+      function refreshQuote() {
+        var amountIn = parsePayAmount();
+        var seq = ++quoteSeq;
+        if (amountIn && (!getProvider() || !chainOk)) {
+          // Quotes are read through the wallet — without a provider, or
+          // while it sits on another network, there is nothing to read from.
+          quoting = false; lastQuote = null;
+          els.receiveInput.value = '';
+          els.receiveUsd.textContent = '';
+          els.detailsBox.classList.remove('show');
+          els.quoteState.textContent = !getProvider()
+            ? 'Connect a wallet — quotes are read through it'
+            : 'Switch to GIWA Sepolia — quotes are read through your wallet';
+          updateSwapBtn();
+          return;
+        }
+        if (!amountIn) {
+          quoting = false; lastQuote = null;
+          els.receiveInput.value = '';
+          els.receiveUsd.textContent = '';
+          els.quoteState.textContent = '';
+          els.detailsBox.classList.remove('show');
+          updateSwapBtn();
+          return;
+        }
+        quoting = true;
+        els.quoteState.textContent = 'Quoting…';
+        updateSwapBtn();
+        var inAddr = tokenInAddress();
+        var inDec = TOKENS[payToken].decimals, outDec = TOKENS[receiveToken()].decimals;
+        // spot reference: quote a small fixed amount in the same direction
+        var refIn = payToken === 'ETH' ? parseUnitsFallback('0.001', 18) : parseUnitsFallback('10', 6);
+        Promise.all([
+          quoteOnce(inAddr, amountIn),
+          quoteOnce(inAddr, refIn).catch(function () { return null; })
+        ]).then(function (res) {
+          if (seq !== quoteSeq) return;
+          quoting = false;
+          if (!verifyOk) verifyPool(); // a working quote means reads are flowing again — finish the pool check too
+          var amountOut = res[0];
+          var rate = (Number(amountOut) / Math.pow(10, outDec)) / (Number(amountIn) / Math.pow(10, inDec));
+          var impact = null;
+          if (res[1] && res[1] > 0n) {
+            var spot = (Number(res[1]) / Math.pow(10, outDec)) / (Number(refIn) / Math.pow(10, inDec));
+            if (spot > 0) impact = Math.max(0, (1 - rate / spot) * 100);
+          }
+          var minOut = amountOut * BigInt(10000 - slippageBps) / 10000n;
+          lastQuote = { amountIn: amountIn, amountOut: amountOut, rate: rate, impact: impact, minOut: minOut };
+          els.receiveInput.value = fmtUnits(amountOut, outDec, payToken === 'ETH' ? 4 : 6);
+          els.quoteState.textContent = '';
+          // USD hint for the receive side, only if the market API gave us a rate
+          if (marketUsdRate) {
+            var usd = receiveToken() === 'TAMM'
+              ? (Number(amountOut) / 1e6) * (lastEthPriceUsd() || 0)
+              : (Number(amountOut) / 1e18) * marketUsdRate;
+            els.receiveUsd.textContent = usd > 0 ? '≈ $' + fmtFloat(usd, 2) : '';
+          } else { els.receiveUsd.textContent = ''; }
+          els.dRate.textContent = payToken === 'ETH'
+            ? '1 ETH = ' + fmtFloat(rate, 4) + ' tAMM'
+            : '1 tAMM = ' + fmtFloat(rate, 6) + ' ETH';
+          els.dImpact.textContent = impact === null ? '—' : (impact < 0.01 ? '<0.01%' : fmtFloat(impact, 2) + '%');
+          els.dImpact.className = 'dv' + (impact !== null && impact >= 3 ? ' warn' : '');
+          els.dMin.textContent = fmtUnits(minOut, outDec, payToken === 'ETH' ? 4 : 6) + ' ' + receiveToken().replace('TAMM', 'tAMM');
+          els.detailsBox.classList.add('show');
+          updateSwapBtn();
+        }).catch(function (e) {
+          if (seq !== quoteSeq) return;
+          quoting = false; lastQuote = null;
+          els.receiveInput.value = '';
+          els.receiveUsd.textContent = '';
+          els.detailsBox.classList.remove('show');
+          els.quoteState.textContent = '';
+          showMsg('err', '<b>Quote failed.</b> ' + escapeHtml(errText(e)));
+          updateSwapBtn();
+        });
+      }
+      var lastSummary = null;
+      function lastEthPriceUsd() {
+        // tAMM USD value derived only from the market API summary (price in ETH × ETH USD rate)
+        if (!lastSummary || !lastSummary.price || !lastSummary.usdRate) return null;
+        return lastSummary.price * lastSummary.usdRate;
+      }
+      function scheduleQuote(delay) {
+        if (debounceTimer) clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(refreshQuote, delay == null ? 400 : delay);
+      }
+      function escapeHtml(s) {
+        return String(s).replace(/[&<>"']/g, function (c) {
+          return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+        });
+      }
+
+      /* ================= swap button state ================= */
+      function updateSwapBtn() {
+        var b = els.swapBtn;
+        if (swapping) { b.disabled = true; return; }
+        if (!getProvider()) { b.disabled = true; b.textContent = 'No wallet detected'; return; }
+        if (!account) { b.disabled = false; b.textContent = 'Connect wallet to swap'; return; }
+        if (!chainOk) { b.disabled = false; b.textContent = 'Switch to GIWA Sepolia'; return; }
+        var amountIn = parsePayAmount();
+        if (!amountIn) { b.disabled = true; b.textContent = 'Enter an amount'; return; }
+        if (balances[payToken] !== null && amountIn > balances[payToken]) {
+          b.disabled = true; b.textContent = 'Insufficient ' + payToken.replace('TAMM', 'tAMM') + ' balance'; return;
+        }
+        if (quoting) { b.disabled = true; b.textContent = 'Fetching quote…'; return; }
+        if (!lastQuote) { b.disabled = true; b.textContent = 'Quote unavailable'; return; }
+        b.disabled = false;
+        b.textContent = payToken === 'ETH' ? 'Swap ETH → tAMM' : 'Swap tAMM → ETH';
+      }
+
+      /* ================= wallet (EIP-1193 + EIP-6963, Brave-ready) ================= */
+      var discovered = [];        // EIP-6963 announcements: [{ provider, info }]
+      var activeProvider = null;  // provider the user picked; Brave wins by default
+      var userPicked = false;     // true once the user explicitly chose a wallet
+      var providerSeen = false;
+      var restoreTried = false;
+
+      function isBraveProvider(p, info) {
+        if (p && p.isBraveWallet) return true;
+        if (info && (info.rdns === 'com.brave.wallet' || /brave/i.test(info.name || ''))) return true;
+        return false;
+      }
+      function labelFor(p, info) {
+        if (isBraveProvider(p, info)) return 'Brave Wallet';
+        if (info && info.name) return info.name;
+        if (!p) return 'Browser wallet';
+        if (p.isMetaMask && !p.isBraveWallet) return 'MetaMask';
+        if (p.isCoinbaseWallet) return 'Coinbase Wallet';
+        if (p.isRabby) return 'Rabby';
+        if (p.isOkxWallet || p.isOKExWallet) return 'OKX Wallet';
+        if (p.isTrust || p.isTrustWallet) return 'Trust Wallet';
+        if (p.isBinance || p.isBinanceWallet) return 'Binance Wallet';
+        if (p.isPhantom) return 'Phantom';
+        if (p.isBitKeep || p.isBitgetWallet) return 'Bitget Wallet';
+        if (p.isTokenPocket) return 'TokenPocket';
+        if (p.isImToken) return 'imToken';
+        if (p.isSafePal) return 'SafePal';
+        return 'Browser wallet';
+      }
+      function entryFor(p) {
+        for (var i = 0; i < discovered.length; i++) if (discovered[i].provider === p) return discovered[i];
+        return null;
+      }
+      function pushProvider(list, p) {
+        // Some wallets expose the EIP-1193 provider directly, others nest it
+        // under .ethereum — accept either shape, dedupe by identity.
+        if (!p) return;
+        var cand = (typeof p.request === 'function') ? p : (p.ethereum && typeof p.ethereum.request === 'function' ? p.ethereum : null);
+        if (cand && list.indexOf(cand) === -1) list.push(cand);
+      }
+      function allProviders() {
+        var list = [];
+        discovered.forEach(function (d) { pushProvider(list, d.provider); });
+        if (window.ethereum) {
+          var subs = Array.isArray(window.ethereum.providers) ? window.ethereum.providers : [window.ethereum];
+          subs.forEach(function (p) { pushProvider(list, p); });
+        }
+        // Wallets that inject under their own global instead of (or besides)
+        // window.ethereum / EIP-6963: OKX, Binance, Trust, Coinbase extension,
+        // Phantom, Bitget, TokenPocket…
+        pushProvider(list, window.okxwallet);
+        pushProvider(list, window.BinanceChain);
+        pushProvider(list, window.binancew3w);
+        pushProvider(list, window.trustwallet);
+        pushProvider(list, window.trustWallet);
+        pushProvider(list, window.coinbaseWalletExtension);
+        if (window.phantom) pushProvider(list, window.phantom.ethereum);
+        pushProvider(list, window.bitkeep);
+        pushProvider(list, window.bitgetWallet);
+        pushProvider(list, window.tokenpocket);
+        return list;
+      }
+      function getProvider() {
+        var list = allProviders();
+        if (!list.length) return null;
+        if (activeProvider && list.indexOf(activeProvider) !== -1) return activeProvider;
+        for (var i = 0; i < list.length; i++) {
+          var e = entryFor(list[i]);
+          if (isBraveProvider(list[i], e && e.info)) return list[i];
+        }
+        return list[0];
+      }
+      function activeLabel() {
+        var p = getProvider();
+        if (!p) return null;
+        var e = entryFor(p);
+        return labelFor(p, e && e.info);
+      }
+      function attachProviderListeners(p) {
+        if (!p || p.__gwaListened || typeof p.on !== 'function') return;
+        p.__gwaListened = true;
+        p.on('accountsChanged', function (addrs) {
+          if (p !== getProvider()) return;
+          if (!addrs || !addrs.length) { disconnect(); return; }
+          account = addrs[0];
+          refreshBalances();
+          renderWallet();
+        });
+        p.on('chainChanged', function () {
+          if (p !== getProvider()) return;
+          checkChain().then(function () { if (account) { refreshBalances(); } });
+        });
+      }
+      function silentRestore() {
+        var p = getProvider();
+        if (!p || restoreTried || account) { renderWallet(); return; }
+        restoreTried = true;
+        p.request({ method: 'eth_accounts' }).then(function (addrs) {
+          if (addrs && addrs.length) {
+            account = addrs[0];
+            return checkChain().then(function () {
+              refreshBalances();
+              renderWallet();
+            });
+          }
+          renderWallet();
+          return null;
+        }).catch(function () { renderWallet(); });
+      }
+      function onProviderFound() {
+        var p = getProvider();
+        if (!p) return;
+        providerSeen = true;
+        els.noWalletBox.classList.remove('show');
+        attachProviderListeners(p);
+        checkChain(); // reads run through this provider — learn its chain early
+        silentRestore();
+      }
+      function inIframe() {
+        try { return window.self !== window.top; } catch (e) { return true; }
+      }
+      function renderEmbedNote() {
+        if (!inIframe()) { els.embedNote.innerHTML = ''; return; }
+        els.embedNote.innerHTML = '<br /><br /><b style="color:var(--text)">This page is open inside another app\u2019s embedded view.</b> ' +
+          'Browser wallets usually do not inject into embedded pages, so no wallet can be detected here. ' +
+          'Open this page\u2019s link directly in a wallet app\u2019s built-in browser (MetaMask, Trust Wallet, OKX, Coinbase Wallet) or in the Brave browser with Brave Wallet unlocked, and the Connect button will work.';
+      }
+      function probeProviders() {
+        // Ask EIP-6963 wallets to (re-)announce, then check every injection
+        // point (window.ethereum, its .providers array, wallet globals).
+        try { window.dispatchEvent(new Event('eip6963:requestProvider')); } catch (e) {}
+        if (allProviders().length) { onProviderFound(); return true; }
+        return false;
+      }
+      function initProviderDiscovery() {
+        // EIP-6963: wallets announce themselves — this is how Brave Wallet
+        // identifies itself even when another extension owns window.ethereum.
+        window.addEventListener('eip6963:announceProvider', function (e) {
+          var d = e && e.detail;
+          if (!d || !d.provider) return;
+          for (var i = 0; i < discovered.length; i++) if (discovered[i].provider === d.provider) return;
+          discovered.push({ provider: d.provider, info: d.info || null });
+          if (!userPicked && isBraveProvider(d.provider, d.info)) activeProvider = d.provider;
+          onProviderFound();
+        });
+        // MetaMask and several others fire this once their provider is ready.
+        window.addEventListener('ethereum#initialized', probeProviders, { once: true });
+        probeProviders();
+        // window.ethereum can be injected well after load — Brave on mobile
+        // often injects late, or only after the wallet is unlocked — so keep
+        // probing for ~20s instead of giving up after a few seconds.
+        var tries = 0;
+        var iv = setInterval(function () {
+          tries++;
+          probeProviders();
+          if (providerSeen || tries >= 40) {
+            clearInterval(iv);
+            if (!providerSeen) { els.noWalletBox.classList.add('show'); renderEmbedNote(); renderWallet(); }
+          }
+        }, 500);
+        // The user may unlock the wallet or flip the Brave Web3 setting and
+        // come back — re-probe whenever the page becomes visible again.
+        window.addEventListener('focus', probeProviders);
+        window.addEventListener('pageshow', probeProviders);
+        document.addEventListener('visibilitychange', function () {
+          if (!document.hidden) probeProviders();
+        });
+      }
+      function renderPicker() {
+        var list = allProviders();
+        if (list.length < 2) { els.walletPicker.classList.remove('show'); els.walletPicker.innerHTML = ''; return; }
+        var current = getProvider();
+        var html = '';
+        list.forEach(function (p, i) {
+          var e = entryFor(p);
+          html += '<button type="button" class="wallet-opt' + (p === current ? ' active' : '') + '" data-prov="' + i + '">' + escapeHtml(labelFor(p, e && e.info)) + '</button>';
+        });
+        els.walletPicker.innerHTML = html;
+        els.walletPicker.classList.add('show');
+        Array.prototype.forEach.call(els.walletPicker.querySelectorAll('[data-prov]'), function (btn) {
+          btn.addEventListener('click', function () {
+            var p = allProviders()[Number(btn.getAttribute('data-prov'))];
+            if (!p) return;
+            // Picking a wallet connects with it straight away.
+            activeProvider = p;
+            userPicked = true;
+            restoreTried = false;
+            if (account) disconnect();
+            activeProvider = p;
+            attachProviderListeners(p);
+            renderWallet();
+            doConnect(p);
+          });
+        });
+      }
+
+      function renderWallet() {
+        var p = getProvider();
+        var name = activeLabel();
+        renderPicker();
+        if (account) {
+          els.connectBtnLabel.textContent = shortAddr(account);
+          els.walletMeta.innerHTML = 'Connected via ' + escapeHtml(name || 'wallet') + ' · <span class="addr mono">' + shortAddr(account) + '</span>' +
+            (chainOk ? ' · GIWA Sepolia' : ' · <span style="color:var(--warn)">wrong network</span>');
+          els.detectNote.textContent = 'Tap the address button to disconnect.';
+        } else if (p) {
+          var count = allProviders().length;
+          els.connectBtnLabel.textContent = 'Connect wallet';
+          els.walletMeta.textContent = 'No wallet connected';
+          els.detectNote.textContent = count > 1
+            ? count + ' wallets detected — tap Connect, then pick yours.'
+            : name + ' detected — tap Connect to link it.';
+        } else {
+          els.connectBtnLabel.textContent = 'Connect wallet';
+          els.walletMeta.textContent = 'No browser wallet found';
+          els.detectNote.textContent = inIframe()
+            ? 'No wallet injected into this embedded view.'
+            : 'Open this page inside a wallet\u2019s browser, or install a wallet extension.';
+        }
+        updateSwapBtn();
+      }
+      function checkChain() {
+        var p = getProvider();
+        if (!p) return Promise.resolve();
+        return p.request({ method: 'eth_chainId' }).then(function (hex) {
+          chainOk = parseInt(hex, 16) === CHAIN_ID;
+          renderWallet();
+          // Reads run through this provider — once its chain is known,
+          // (re)run pool verification and quoting against it.
+          verifyPool();
+          if (chainOk) scheduleQuote(0);
+        }).catch(function () {});
+      }
+      function ensureChain() {
+        var p = getProvider();
+        if (!p) return Promise.reject(new Error('No wallet provider available.'));
+        var chainHex = '0x' + CHAIN_ID.toString(16);
+        return p.request({ method: 'eth_chainId' }).then(function (hex) {
+          if (parseInt(hex, 16) === CHAIN_ID) { chainOk = true; renderWallet(); return null; }
+          return p.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: chainHex }] })
+            .catch(function (e) {
+              if (e && (e.code === 4902 || /not added|unrecognized/i.test(e.message || ''))) {
+                return p.request({
+                  method: 'wallet_addEthereumChain',
+                  params: [{
+                    chainId: chainHex, chainName: 'GIWA Sepolia',
+                    nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+                    rpcUrls: [RPC_URL], blockExplorerUrls: [EXPLORER]
+                  }]
+                }).then(function () {
+                  return p.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: chainHex }] });
+                });
+              }
+              throw e;
+            });
+        }).then(function () {
+          return p.request({ method: 'eth_chainId' });
+        }).then(function (hex) {
+          chainOk = parseInt(hex, 16) === CHAIN_ID;
+          renderWallet();
+          verifyPool();
+          if (chainOk) scheduleQuote(0);
+        });
+      }
+      function connect() {
+        var list = allProviders();
+        if (list.length > 1 && !userPicked) {
+          // Several wallets are installed — don't guess (the old build always
+          // grabbed Brave first). Let the user tap the wallet they mean.
+          renderPicker();
+          showMsg('info', '<b>More than one wallet detected.</b> Tap the wallet you want to use — ' +
+            list.map(function (p) { var e = entryFor(p); return escapeHtml(labelFor(p, e && e.info)); }).join(', ') +
+            ' — using the wallet buttons under the Connect button.');
+          return;
+        }
+        var p = getProvider();
+        if (p) { doConnect(p); return; }
+        // No provider yet — run one fresh discovery pass before giving up:
+        // Brave can inject (or announce) only after the user unlocks the
+        // wallet or returns from Settings.
+        els.connectBtn.disabled = true;
+        els.connectBtnLabel.textContent = 'Looking for wallet…';
+        probeProviders();
+        setTimeout(function () {
+          els.connectBtn.disabled = false;
+          var p2 = getProvider();
+          if (p2) { renderWallet(); doConnect(p2); return; }
+          renderWallet();
+          showMsg('err', '<b>No wallet detected.</b> Open this page inside a wallet app\u2019s built-in browser (MetaMask, Trust Wallet, OKX, Coinbase Wallet), in the <b>Brave browser</b> with Brave Wallet unlocked, or install a wallet extension such as <a href="https://metamask.io/download/" target="_blank" rel="noopener">MetaMask</a>, then reload.' +
+            (inIframe() ? '<br /><br />Note: this page is open inside another app\u2019s embedded view, where browser wallets usually do not inject — open the page\u2019s link directly in a wallet app or a regular browser instead.' : ''));
+          els.noWalletBox.classList.add('show');
+          renderEmbedNote();
+        }, 900);
+      }
+      function doConnect(p) {
+        hideMsg();
+        els.connectBtn.disabled = true;
+        // Ask the provider directly (works even before the SDK finishes loading)
+        p.request({ method: 'eth_requestAccounts' }).then(function (addrs) {
+          if (!addrs || !addrs.length) throw new Error('Your wallet returned no account.');
+          account = addrs[0];
+          activeProvider = p;
+          userPicked = true;
+          attachProviderListeners(p);
+          refreshBalances(); // balances first — don't make them wait for a chain-switch prompt or the SDK
+          return ensureChain();
+        }).then(function () {
+          renderWallet();
+          return refreshBalances(); // re-read now the wallet is on GIWA Sepolia
+        }).catch(function (e) {
+          showMsg('err', escapeHtml(errText(e)));
+        }).then(function () { els.connectBtn.disabled = false; renderWallet(); });
+      }
+      function disconnect() {
+        account = null;
+        balances = { ETH: null, TAMM: null };
+        renderBalances(); renderWallet();
+      }
+
+      /* ================= swap execution ================= */
+      function executeSwap() {
+        if (!account) { connect(); return; }
+        if (!chainOk) {
+          ensureChain().catch(function (e) { showMsg('err', escapeHtml(errText(e))); });
+          return;
+        }
+        var amountIn = parsePayAmount();
+        if (!amountIn || swapping) return;
+        swapping = true;
+        els.swapBtn.disabled = true;
+        hideMsg();
+        // The SDK is only needed from here on — it builds the swap
+        // calldata. It has been loading in the background since page open;
+        // if it is not ready yet, wait for it now instead of blocking the
+        // whole page on it.
+        var ready = sdk ? Promise.resolve() : (els.swapBtn.textContent = 'Preparing swap…', loadSdk());
+        ready.then(function () {
+        // fresh quote right before building, so minOut tracks the live pool
+        var inAddr = tokenInAddress();
+        return quoteOnce(inAddr, amountIn);
+        }).then(function (amountOut) {
+          var minOut = amountOut * BigInt(10000 - slippageBps) / 10000n;
+          var deadline = BigInt(Math.floor(Date.now() / 1000) + 20 * 60);
+          if (payToken === 'ETH') return doBuy(amountIn, minOut, deadline);
+          return doSell(amountIn, minOut, deadline);
+        }).catch(function (e) {
+          showMsg('err', sdk
+            ? '<b>Swap aborted — fresh quote failed.</b> ' + escapeHtml(errText(e))
+            : '<b>Swap engine failed to load.</b> ' + escapeHtml(errText(e)) + ' Check your connection, then tap Swap to try again.');
+        }).then(function () {
+          swapping = false;
+          updateSwapBtn();
+        });
+      }
+      function doBuy(amountIn, minOut, deadline) {
+        var built = sdk.buildV3NativePoolExactInput(activePool, amountIn, minOut, account, deadline, ZERO);
+        els.swapBtn.textContent = 'Confirm in your wallet…';
+        return sendTxRaw({
+          to: ROUTER, data: built.data,
+          value: typeof built.value === 'bigint' ? built.value : amountIn
+        }).then(function (hash) { return waitSwap(hash, 'Bought tAMM with ETH'); });
+      }
+      function doSell(amountIn, minOut, deadline) {
+        els.swapBtn.textContent = 'Checking tAMM allowance…';
+        return ethCall(TOKEN, SEL.allowance + encAddr(account) + encAddr(ROUTER)).then(function (hex) {
+          var allowance = decodeUint(hex);
+          if (allowance >= amountIn) return null;
+          els.swapBtn.textContent = 'Approve tAMM in your wallet…';
+          return sendTxRaw({ to: TOKEN, data: SEL.approve + encAddr(ROUTER) + encUint(amountIn), value: 0n })
+          .then(function (ah) {
+            els.swapBtn.textContent = 'Waiting for approval…';
+            return waitReceiptRaw(ah);
+          }).then(function (rcpt) {
+            if (!rcpt || rcpt.status !== '0x1') throw new Error('The approval transaction reverted on-chain.');
+            return null;
+          });
+        }).then(function () {
+          var built = sdk.buildV3PoolExactInputForNative(activePool, TOKEN, amountIn, minOut, account, deadline, ZERO);
+          els.swapBtn.textContent = 'Confirm in your wallet…';
+          return sendTxRaw({ to: ROUTER, data: built.data, value: 0n });
+        }).then(function (hash) { return waitSwap(hash, 'Sold tAMM for ETH'); });
+      }
+      function waitSwap(hash, label) {
+        els.swapBtn.textContent = 'Waiting for confirmation…';
+        showMsg('info', label + ' — transaction sent.<br /><span class="txhash">' + hash + '</span>');
+        return waitReceiptRaw(hash).then(function (rcpt) {
+          if (!rcpt || rcpt.status !== '0x1') {
+            showMsg('err', '<b>Transaction reverted on-chain.</b><br /><a href="' + EXPLORER + '/tx/' + hash + '" target="_blank" rel="noopener">View on the GIWA Sepolia explorer</a>');
+            return;
+          }
+          showMsg('ok', '<b>Swap confirmed.</b> ' + label + '.<br /><span class="txhash">' + hash + '</span><br /><a href="' + EXPLORER + '/tx/' + hash + '" target="_blank" rel="noopener">View on the GIWA Sepolia explorer</a>');
+          els.payInput.value = '';
+          lastQuote = null;
+          els.receiveInput.value = ''; els.receiveUsd.textContent = '';
+          els.detailsBox.classList.remove('show');
+          refreshBalances();
+        }).catch(function (e) {
+          showMsg('err', '<b>Could not confirm the transaction.</b> ' + escapeHtml(errText(e)) + '<br /><a href="' + EXPLORER + '/tx/' + hash + '" target="_blank" rel="noopener">View on the GIWA Sepolia explorer</a>');
+        });
+      }
+
+      /* ================= market panel ================= */
+      function loadMarket() {
+        fetch(MARKET_URL, { cache: 'no-store' }).then(function (r) {
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          return r.json();
+        }).then(function (d) {
+          var s = d && d.summary;
+          if (!s || typeof s.price !== 'number') throw new Error('No summary');
+          lastSummary = s;
+          marketUsdRate = typeof s.usdRate === 'number' ? s.usdRate : null;
+          els.mPriceEth.innerHTML = fmtFloat(s.price, 8) + ' <small>ETH</small>';
+          els.mPriceUsd.textContent = typeof s.priceUsd === 'number' ? '$' + fmtFloat(s.priceUsd, 4) : '—';
+          els.mVol.innerHTML = typeof s.volume24h === 'number'
+            ? fmtFloat(s.volume24h, 2) + ' <small>ETH</small>' + (typeof s.volume24hUsd === 'number' ? ' <small>($' + fmtFloat(s.volume24hUsd, 0) + ')</small>' : '')
+            : '—';
+          els.mUpdated.textContent = 'updated ' + new Date().toLocaleTimeString();
+          els.marketPanel.classList.add('show');
+          if (lastQuote) refreshQuote();
+        }).catch(function () {
+          els.marketPanel.classList.remove('show');
+          lastSummary = null; marketUsdRate = null;
+        });
+      }
+
+      /* ================= on-chain verification ================= */
+      function setVerifyTick(state) {
+        var t = $('verifyTick');
+        t.className = 'tick' + (state === 'ok' ? ' ok' : state === 'warn' ? ' warn' : '');
+        t.innerHTML = state === 'ok'
+          ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>'
+          : state === 'warn' ? '!' : '…';
+      }
+      var verifyOk = false, verifyInFlight = false, verifyTimer = null, verifyFails = 0;
+      function verifyPool() {
+        if (verifyOk || verifyInFlight) return;
+        if (!getProvider()) {
+          setVerifyTick('');
+          els.verifyText.textContent = 'Connect your wallet to verify the pool — verification, quotes and balances are all read through your wallet\u2019s own connection to GIWA Sepolia. This page never calls a public RPC.';
+          return;
+        }
+        if (!chainOk) {
+          setVerifyTick('');
+          els.verifyText.textContent = 'Switch your wallet to GIWA Sepolia to verify the pool — reads go through your wallet, and it is on a different network right now.';
+          return;
+        }
+        verifyInFlight = true;
+        Promise.all([
+          ethCall(CURVE, SEL.curveStatus),
+          ethCall(CURVE, SEL.canonicalPool),
+          ethCall(FACTORY, SEL.isPool + encAddr(POOL))
+        ]).then(function (res) {
+          verifyInFlight = false;
+          verifyOk = true;
+          verifyFails = 0;
+          if (verifyTimer) { clearTimeout(verifyTimer); verifyTimer = null; }
+          var status = Number(decodeUint(res[0]));
+          var canonical = decodeAddr(res[1]).toLowerCase();
+          var isPool = decodeUint(res[2]) !== 0n;
+          if (canonical && canonical !== ZERO) activePool = canonical;
+          if (status === 3 && canonical === POOL.toLowerCase() && isPool) {
+            setVerifyTick('ok');
+            els.verifyText.innerHTML = 'The $tAMM curve has <b style="color:var(--text)">graduated (status 3)</b>, its canonical pool matches the address below, and the V5 factory confirms it is a registered ARL V5 pool. Quotes and swaps use exactly this pool.';
+          } else {
+            setVerifyTick('warn');
+            els.verifyText.innerHTML = 'Curve status read as <b style="color:var(--text)">' + status + '</b> · canonical pool <span class="mono">' + shortAddr(canonical) + '</span> · factory isPool: <b style="color:var(--text)">' + isPool + '</b>. Quotes use the curve\u2019s canonical pool.';
+          }
+        }).catch(function (e) {
+          verifyInFlight = false;
+          verifyFails++;
+          setVerifyTick('warn');
+          els.verifyText.textContent = 'Your wallet could not reach GIWA Sepolia to verify the pool (' + errText(e) + '). All reads on this page go through your wallet — make sure it is unlocked and on GIWA Sepolia. This check retries on its own.';
+          // Self-heal: keep retrying with a growing pause (5s, capped at
+          // 30s) until the wallet answers; a successful quote also re-triggers.
+          if (verifyTimer) clearTimeout(verifyTimer);
+          verifyTimer = setTimeout(verifyPool, Math.min(30000, 5000 * verifyFails));
+        });
+      }
+
+      /* ================= wiring ================= */
+      els.payInput.addEventListener('input', function () {
+        var v = els.payInput.value;
+        var clean = v.replace(/[^0-9.]/g, '');
+        var parts = clean.split('.');
+        if (parts.length > 2) clean = parts[0] + '.' + parts.slice(1).join('');
+        if (clean !== v) els.payInput.value = clean;
+        hideMsg();
+        scheduleQuote(400);
+        updateSwapBtn();
+      });
+      els.flipBtn.addEventListener('click', function () {
+        setDirection(receiveToken(), true);
+      });
+      Array.prototype.forEach.call(document.querySelectorAll('.pct-btn'), function (btn) {
+        btn.addEventListener('click', function () {
+          var bal = balances[payToken];
+          if (bal === null || !account) {
+            if (!account) showMsg('info', 'Connect your wallet first — percentage buttons use your live balance.');
+            return;
+          }
+          var pct = BigInt(btn.getAttribute('data-pct'));
+          var amt = bal * pct / 100n;
+          if (payToken === 'ETH' && pct === 100n) {
+            var gasBuf = parseUnitsFallback('0.001', 18);
+            if (amt > gasBuf) amt = amt - gasBuf; // leave a little testnet ETH for gas
+          }
+          els.payInput.value = scaleUnits(amt, TOKENS[payToken].decimals);
+          scheduleQuote(0);
+          updateSwapBtn();
+        });
+      });
+      Array.prototype.forEach.call(document.querySelectorAll('.slip-btn'), function (btn) {
+        btn.addEventListener('click', function () {
+          Array.prototype.forEach.call(document.querySelectorAll('.slip-btn'), function (b) { b.classList.remove('active'); });
+          btn.classList.add('active');
+          slippageBps = Number(btn.getAttribute('data-slip'));
+          refreshQuote();
+        });
+      });
+      els.swapBtn.addEventListener('click', function () { executeSwap(); });
+      els.recheckBtn.addEventListener('click', function () {
+        hideMsg();
+        if (probeProviders()) {
+          showMsg('ok', '<b>Wallet found.</b> Tap <b>Connect wallet</b> at the top of the page to link it.');
+        } else {
+          renderEmbedNote();
+          showMsg('err', '<b>Still no wallet found.</b> Unlock your wallet first — in Brave, also make sure Settings → Web3 uses Brave Wallet as the default Ethereum wallet — or open this page inside your wallet app\u2019s built-in browser, then tap Re-check again.');
+        }
+      });
+      els.connectBtn.addEventListener('click', function () {
+        if (account) { disconnect(); } else { connect(); }
+      });
+
+      /* ================= init ================= */
+      buildAddrList();
+      wireMenu(els.payTokenBtn, els.payMenu, 'pay');
+      wireMenu(els.receiveTokenBtn, els.receiveMenu, 'receive');
+      renderDirection();
+      loadMarket();
+      setInterval(loadMarket, 60000);
+
+      initProviderDiscovery();
+      renderWallet();
+      // Periodic refresh runs from page open — quotes and balances are raw
+      // wallet reads now, so they never wait for the SDK download.
+      quoteTimer = setInterval(function () { if (parsePayAmount()) refreshQuote(); }, 15000);
+      balanceTimer = setInterval(function () { if (account) refreshBalances(); }, 20000);
+
+      // Load the Ammora SDK in the background — it is only needed to build
+      // swap calldata. Quotes, balances and verification already work
+      // without it, so a slow or failed download never blocks the page; if
+      // esm.sh stalls, jsDelivr is tried as a fallback, and tapping Swap
+      // waits for (or retries) the load via the returned promise.
+      function loadSdk() {
+        if (sdk) return Promise.resolve(sdk);
+        if (sdkPromise) return sdkPromise;
+        sdkFailed = false;
+        var seq = ++sdkLoadSeq;
+        var urls = [SDK_FILE, SDK_FILE_FALLBACK];
+        function attempt(i) {
+          var url = urls[i] + (seq > 1 && i === 0 ? '?retry=' + seq : '');
+          var timeout = new Promise(function (resolve, reject) {
+            setTimeout(function () { reject(new Error('Timed out after 45 seconds — the download is very slow on this connection.')); }, 45000);
+          });
+          return Promise.race([import(url), timeout]).catch(function (e) {
+            if (i + 1 < urls.length) return attempt(i + 1);
+            throw e;
+          });
+        }
+        sdkPromise = attempt(0).then(function (mod) {
+          if (!mod.buildV3NativePoolExactInput || !mod.buildV3PoolExactInputForNative) {
+            throw new Error('The Ammora SDK loaded but the expected swap builders are missing.');
+          }
+          sdk = mod;
+          sdkPromise = null;
+          if (account) refreshBalances();
+          updateSwapBtn();
+          return mod;
+        }).catch(function (e) {
+          sdkPromise = null;
+          sdkFailed = true;
+          // Surfaced to the user only when a swap is actually waiting on it
+          // (executeSwap's own handler) — the rest of the page keeps working.
+          updateSwapBtn();
+          throw e;
+        });
+        return sdkPromise;
+      }
+      loadSdk().catch(function () { /* background preload — a failure is reported when a swap is attempted */ });
+    })();
+    </script>
+  </body>
+</html>
